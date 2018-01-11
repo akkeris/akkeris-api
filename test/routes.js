@@ -39,19 +39,6 @@ describe("router", function() {
         })
     });
 
-    ['organizations', 'organizations/foo', 'spaces/foo', 'account', 'addon-services/foo', 'addon-services'].forEach( route => {
-        ['delete', 'patch', 'put'].forEach( method => {
-            it(`ensures that ${method.toUpperCase()} requests to /${route} are rejected`, (done) => {
-                console.log(`Try request ${method} ${route}`);
-                httph.request(method, 'http://localhost:5000/' + route, {"Authorization": process.env.AUTH_KEY}, null, (err, data) => {
-                    expect(err).to.be.an('object');
-                    expect(data).to.be.null;
-                    expect(err.code).to.equal(403);
-                    done();
-                });
-            });
-        });
-    });
 
     it('allows whitelisted aggregate routes', (done) => {
         httph.request('get', 'http://localhost:5000/apps', {'Authorization': process.env.AUTH_KEY}, null, (err, data) => {
