@@ -8,98 +8,57 @@ let express    = require('express'),
   uuid         = require('node-uuid'),
   proxy        = require('./lib/proxy.js'),
   perms        = require('./lib/permissions.js'),
-  redact       = require('./lib/redact.js').redactSecrets,
   httph        = require('./lib/http_helper.js'),
   app          = express();
 
-
-// Declares that the specified routes only allow the associated methods.
-const methodRestrictions = {
-    'organizations': ['get', 'post'],
-    'organizations/*': ['get'],
-    'spaces': ['get', 'post'],
-    'spaces/*': ['get'],
-    'addon-services': ['get'],
-    'addon-services/*': ['get'],
-    'account': ['get']
-};
+app.disable('etag')
+app.disable('x-powered-by');
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
 
 function tokenValidate(req, res, next){
-    const token = req.get('Authorization');
-
-    let finished = (err, user) => {
-        if (err || !user){
-            res.sendStatus(401);
-        } else {
-            if (typeof user == 'string')
-                user = JSON.parse(user);
-
-            if (!perms.isAllowed(user.memberOf) && user.sAMAccountName !== process.env.TEST_ACCOUNT) {
-                return res.sendStatus(403);
-            }
-
-            req.user = user;
-            console.log(req.user.name,'(' + req.user.mail + ')', 'requested', req.method, (req.url || req.path));
-            next();
+  const token = req.get('Authorization');
+  if(!token) {
+    return res.sendStatus(401)
+  }
+  if(token.toLowerCase().startsWith('bearer')) {
+    oauth.getUser(token, (err, user) => {
+      if (err || !user){
+        res.sendStatus(401);
+      } else {
+        if (typeof user === 'string') {
+          user = JSON.parse(user)
         }
-    };
-    if(!token) {
-        return res.sendStatus(401)
-    }
-    if(token.toLowerCase().startsWith('bearer')) {
-        oauth.getUser(token, finished);
-    } else {
-        return res.sendStatus(401)
-    }
-    
-}
-
-function methodValidate(req, res, next){
-    let resource = req.url;
-    if (resource.indexOf('/') == 0)
-        resource = resource.substr(1);
-
-    resource = resource.replace(/\/.*$/, '/*');
-
-    if (methodRestrictions[resource] && methodRestrictions[resource].indexOf(req.method.toLowerCase()) < 0){
-        res.sendStatus(403);
-    }
-    else {
+        if (!perms.isAllowed(user.memberOf) && user.sAMAccountName !== process.env.TEST_ACCOUNT) {
+          return res.sendStatus(403);
+        }
+        req.user = user;
+        console.log(req.user.name,'(' + req.user.mail + ')', 'requested', req.method, (req.url || req.path));
         next();
-    }
-}
-
-function validResponseHandler(res) {
-    return (err, result) => {
-        if (err){
-            if (typeof(err) === 'number') {
-                res.status(err);
-                res.send(result);
-            }
-            else if (typeof err == 'string') {
-                res.status(500);
-                res.send(err + "\n" + result);
-            }
-            else {
-                let code = err.code || err.status;
-                res.status(code || 500);
-                res.send(err.message ? err.message : result);
-            }
-        }
-        else {
-            res.send(result);
-        }
-    }
+      }
+    });
+  } else {
+    return res.sendStatus(401)
+  }
 }
 
 function proxyToAkkeris(req, res){
-    proxy.akkeris(req.url, req.method, req.body, req.user, validResponseHandler(res));
+  proxy.akkeris(req.url, req.headers, req.method, req.body, req.user, (err, proxied_response) => {
+    if (err && err instanceof Error) {
+      res.status(503).send("Internal Server Error");
+    } else {
+      delete proxied_response.headers['content-length']
+      delete proxied_response.headers['transfer-encoding']
+      res.status(proxied_response.code)
+        .set(proxied_response.headers)
+        .send(proxied_response.data)
+        .end()
+    }
+  });
 }
 
 app.get('/octhc', (req, res) => {
-    res.send("overall_status=good");
+  res.send("overall_status=good");
 });
 
 function fromMSLDAPSortOfUnixEpoch(time) {
@@ -127,49 +86,31 @@ function fromMSExchangeSortOfISO(time) {
 }
 
 app.get('/account', tokenValidate, (req, res) => {
-    res.send(JSON.stringify({
-      "allow_tracking": true,
-      "beta": false,
-      "created_at": fromMSExchangeSortOfISO(req.user.whenCreated).toISOString(),
-      "email": req.user.mail,
-      "id": uuid.unparse(crypto.createHash('sha256').update(req.user.employeeID).digest(), 16),
-      "last_login": fromMSLDAPSortOfUnixEpoch(req.user.lastLogon).toISOString(),
-      "name": req.user.name,
-      "sms_number": req.user.mobile,
-      "suspended_at": null,
-      "delinquent_at": null,
-      "two_factor_authentication": false,
-      "updated_at": fromMSExchangeSortOfISO(req.user.whenChanged).toISOString(),
-      "verified": true
-    }));
+  res.type('json').send({
+    "allow_tracking": true,
+    "beta": false,
+    "created_at": fromMSExchangeSortOfISO(req.user.whenCreated).toISOString(),
+    "email": req.user.mail,
+    "id": uuid.unparse(crypto.createHash('sha256').update(req.user.employeeID).digest(), 16),
+    "last_login": fromMSLDAPSortOfUnixEpoch(req.user.lastLogon).toISOString(),
+    "name": req.user.name,
+    "sms_number": req.user.mobile,
+    "suspended_at": null,
+    "delinquent_at": null,
+    "two_factor_authentication": false,
+    "updated_at": fromMSExchangeSortOfISO(req.user.whenChanged).toISOString(),
+    "verified": true
+  });
 });
 
-/*
- * Routes that go to all backends:
- */
-app.get('/apps', tokenValidate, methodValidate, proxyToAkkeris);
-app.get('/spaces', tokenValidate, methodValidate, proxyToAkkeris);
-app.get('/addon-services', tokenValidate, methodValidate, proxyToAkkeris);
-
-/*
- * Routes that need secrets redacted:
- */
-app.get('/apps/:app/config-vars', tokenValidate, methodValidate, proxyToAkkeris);
-
-/*
- * Catch-all routes. These must be at the bottom. DO NOT REORDER!
- */
-app.get('*', tokenValidate, methodValidate, proxyToAkkeris);
-app.put('*', tokenValidate, methodValidate, proxyToAkkeris);
-app.patch('*', tokenValidate, methodValidate, proxyToAkkeris);
-app.post('*', tokenValidate, methodValidate, proxyToAkkeris);
-app.delete('*', tokenValidate, methodValidate, proxyToAkkeris);
+app.all('*', tokenValidate, proxyToAkkeris);
 
 process.on('uncaughtException', function (err) {
-    console.error((new Date).toUTCString() + ' uncaughtException:', err.message);
-    console.error(err.stack);
+  console.error((new Date).toUTCString() + ' uncaughtException:', err.message);
+  console.error(err.stack);
 });
 
 oauth.init();
 
 app.listen(process.env.PORT || 5000);
+console.log("Listening on " + (process.env.PORT || 5000))
