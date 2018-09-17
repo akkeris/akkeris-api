@@ -17,29 +17,38 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
 
 function tokenValidate(req, res, next){
-  const token = req.get('Authorization');
+  let token = req.get('Authorization');
   if(!token) {
     return res.sendStatus(401)
   }
-  if(token.toLowerCase().startsWith('bearer')) {
-    oauth.getUser(token, (err, user) => {
-      if (err || !user){
-        res.sendStatus(401);
-      } else {
-        if (typeof user === 'string') {
-          user = JSON.parse(user)
-        }
-        if (!perms.isAllowed(user.memberOf) && user.sAMAccountName !== process.env.TEST_ACCOUNT) {
-          return res.sendStatus(403);
-        }
-        req.user = user;
-        console.log(req.user.name,'(' + req.user.mail + ')', 'requested', req.method, (req.url || req.path));
-        next();
-      }
-    });
-  } else {
+
+  if (token.toLowerCase().startsWith('basic')) {
+    try {
+      let encoded = Buffer.from(token.substring(6).trim(), 'base64').toString('utf8')
+      token = 'Bearer ' + encoded.split(':')[1].trim()
+    } catch (e) {
+      return res.sendStatus(401)
+    }
+  } else if(!token.toLowerCase().startsWith('bearer')) {
     return res.sendStatus(401)
   }
+
+
+  oauth.getUser(token, (err, user) => {
+    if (err || !user){
+      res.sendStatus(401);
+    } else {
+      if (typeof user === 'string') {
+        user = JSON.parse(user)
+      }
+      if (!perms.isAllowed(user.memberOf) && user.sAMAccountName !== process.env.TEST_ACCOUNT) {
+        return res.sendStatus(403);
+      }
+      req.user = user;
+      console.log(req.user.name,'(' + req.user.mail + ')', 'requested', req.method, (req.url || req.path));
+      next();
+    }
+  });
 }
 
 function proxyToAkkeris(req, res){
