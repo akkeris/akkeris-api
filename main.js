@@ -99,6 +99,7 @@ app.get('/account', tokenValidate, (req, res) => {
     "allow_tracking": true,
     "beta": false,
     "created_at": fromMSExchangeSortOfISO(req.user.whenCreated).toISOString(),
+    "elevated_access": perms.isElevated(req.user.memberOf),
     "email": req.user.mail,
     "id": uuid.unparse(crypto.createHash('sha256').update(req.user.employeeID).digest(), 16),
     "last_login": fromMSLDAPSortOfUnixEpoch(req.user.lastLogon).toISOString(),
