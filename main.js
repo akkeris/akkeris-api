@@ -36,17 +36,33 @@ function tokenValidate(req, res, next){
 
   oauth.getUser(token, (err, user) => {
     if (err || !user){
+      if(err) {
+        console.error(err)
+      }
       res.sendStatus(401);
     } else {
-      if (typeof user === 'string') {
-        user = JSON.parse(user)
-      }
-      if (!perms.isAllowed(user.memberOf) && user.sAMAccountName !== process.env.TEST_ACCOUNT) {
+      if (user.memberOf && !perms.isAllowed(user.memberOf) && user.sAMAccountName !== process.env.TEST_ACCOUNT) {
         return res.sendStatus(403);
       }
-      req.user = user;
-      console.log(req.user.name,'(' + req.user.mail + ')', 'requested', req.method, (req.url || req.path));
-      next();
+      if (user.organizations_url) {
+        oauth.getOrganization(token, user.organizations_url, (err, orgs) => {
+          if (err || !orgs) {
+            res.sendStatus(401);
+          } else {
+            user.orgs = orgs;
+            if (!perms.isAllowed(user.orgs.map((x) => x.login)) && user.id !== process.env.TEST_ACCOUNT) {
+              return res.sendStatus(403);
+            }
+            req.user = user;
+            console.log(req.user.name,'(' + req.user.mail + ')', 'requested', req.method, (req.url || req.path));
+            next();
+          }
+        })
+      } else {
+        req.user = user;
+        console.log(req.user.name,'(' + req.user.mail + ')', 'requested', req.method, (req.url || req.path));
+        next();
+      }
     }
   });
 }
@@ -98,16 +114,17 @@ app.get('/account', tokenValidate, (req, res) => {
   res.type('json').send({
     "allow_tracking": true,
     "beta": false,
-    "created_at": fromMSExchangeSortOfISO(req.user.whenCreated).toISOString(),
-    "email": req.user.mail,
-    "id": uuid.unparse(crypto.createHash('sha256').update(req.user.employeeID).digest(), 16),
-    "last_login": fromMSLDAPSortOfUnixEpoch(req.user.lastLogon).toISOString(),
+    "created_at": req.user.whenCreated ? fromMSExchangeSortOfISO(req.user.whenCreated).toISOString() : req.user.created_at,
+    "email": req.user.mail || req.user.email,
+    "photo": req.user.picture || req.user.avatar_url,
+    "id": uuid.unparse(crypto.createHash('sha256').update(req.user.employeeID || req.user.id || req.user.login).digest(), 16),
+    "last_login": fromMSLDAPSortOfUnixEpoch(req.user.lastLogon || req.user.updated_at).toISOString(),
     "name": req.user.name,
-    "sms_number": req.user.mobile,
+    "sms_number": req.user.mobile || "",
     "suspended_at": null,
     "delinquent_at": null,
-    "two_factor_authentication": false,
-    "updated_at": fromMSExchangeSortOfISO(req.user.whenChanged).toISOString(),
+    "two_factor_authentication": req.user.two_factor_authentication || false,
+    "updated_at": fromMSExchangeSortOfISO(req.user.whenChanged || req.user.updated_at).toISOString(),
     "verified": true
   });
 });
