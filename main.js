@@ -112,21 +112,37 @@ function fromMSExchangeSortOfISO(time) {
 
 app.get('/account', tokenValidate, (req, res) => {
   let email = req.user.mail || req.user.email || `${req.user.login}@unknown`
+  let id = req.user.employeeID || req.user.id || req.user.login.toString();
+  if (typeof id === "number") {
+    id = id.toString()
+  }
+  let updated = req.user.whenChanged || req.user.updated_at
+  try {
+    updated = fromMSExchangeSortOfISO(updated).toISOString()
+  } catch (e) {
+    updated = new Date(updated).toISOString()
+  }
+  let created = req.user.whenCreated || req.user.created_at
+  try {
+    created = fromMSExchangeSortOfISO(created).toISOString()
+  } catch (e) {
+    created = new Date(created).toISOString()
+  }
   res.type('json').send({
     "allow_tracking": true,
     "beta": false,
-    "created_at": req.user.whenCreated ? fromMSExchangeSortOfISO(req.user.whenCreated).toISOString() : req.user.created_at,
+    "created_at": created,
     "email": email,
     "photo": req.user.picture || req.user.avatar_url,
-    "id": uuid.unparse(crypto.createHash('sha256').update(req.user.employeeID || req.user.id || req.user.login).digest(), 16),
-    "last_login": fromMSLDAPSortOfUnixEpoch(req.user.lastLogon || req.user.updated_at).toISOString(),
+    "id": uuid.unparse(crypto.createHash('sha256').update(id).digest(), 16),
+    "last_login": updated,
     "name": req.user.name || req.user.login || req.user.id,
     "sms_number": req.user.mobile || "",
-    "elevated_access": perms.isElevated(req.user.memberOf || req.user.login || req.user.id),
+    "elevated_access": perms.isElevated(req.user.memberOf || [req.user.login || req.user.id]),
     "suspended_at": null,
     "delinquent_at": null,
     "two_factor_authentication": req.user.two_factor_authentication || false,
-    "updated_at": fromMSExchangeSortOfISO(req.user.whenChanged || req.user.updated_at).toISOString(),
+    "updated_at": updated,
     "verified": true
   });
 });
