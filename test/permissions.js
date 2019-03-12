@@ -25,6 +25,8 @@ describe("permissions", function() {
         expect(perms.isElevated(["group1"])).to.be.false;
         expect(perms.isElevated(["group2"])).to.be.true;
         expect(perms.isElevated(["user1"])).to.be.true;
+        expect(perms.isElevated(["USER1"])).to.be.true;
+        expect(perms.isElevated(["USER1 "])).to.be.true;
         done()
     });
 });
