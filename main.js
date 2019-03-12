@@ -122,6 +122,7 @@ app.get('/account', tokenValidate, (req, res) => {
     "last_login": fromMSLDAPSortOfUnixEpoch(req.user.lastLogon || req.user.updated_at).toISOString(),
     "name": req.user.name || req.user.login || req.user.id,
     "sms_number": req.user.mobile || "",
+    "elevated_access": perms.isElevated(req.user.memberOf || req.user.login || req.user.id),
     "suspended_at": null,
     "delinquent_at": null,
     "two_factor_authentication": req.user.two_factor_authentication || false,
