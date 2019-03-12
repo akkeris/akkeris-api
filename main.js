@@ -111,15 +111,16 @@ function fromMSExchangeSortOfISO(time) {
 }
 
 app.get('/account', tokenValidate, (req, res) => {
+  let email = req.user.mail || req.user.email || `${req.user.login}@unknown`
   res.type('json').send({
     "allow_tracking": true,
     "beta": false,
     "created_at": req.user.whenCreated ? fromMSExchangeSortOfISO(req.user.whenCreated).toISOString() : req.user.created_at,
-    "email": req.user.mail || req.user.email,
+    "email": email,
     "photo": req.user.picture || req.user.avatar_url,
     "id": uuid.unparse(crypto.createHash('sha256').update(req.user.employeeID || req.user.id || req.user.login).digest(), 16),
     "last_login": fromMSLDAPSortOfUnixEpoch(req.user.lastLogon || req.user.updated_at).toISOString(),
-    "name": req.user.name,
+    "name": req.user.name || req.user.login || req.user.id,
     "sms_number": req.user.mobile || "",
     "suspended_at": null,
     "delinquent_at": null,
