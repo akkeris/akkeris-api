@@ -14,11 +14,17 @@ describe("permissions", function() {
         expect(perms.isAllowed(["CN=dev2,OU=Security,OU=OCT-Groups,DC=example,DC=com"])).to.be.false;
         expect(perms.isAllowed(["CN=dev,OU=Security,OU=OCT-Groups,DC=example,DC=com","CN=dev2,OU=Security,OU=OCT-Groups,DC=example,DC=com"])).to.be.true;
         expect(perms.isAllowed([" CN=dev,OU=Security,OU=OCT-Groups,DC=example,DC=com ","CN=dev2,OU=Security,OU=OCT-Groups,DC=example,DC=com"])).to.be.true;
-
         process.env.BASIC_ACCESS = 'CN=dev2,OU=Security,OU=OCT-Groups,DC=example,DC=com;CN=SG-LinuxAdmins2,OU=Admin,OU=OCT-Groups,DC=example,DC=com;CN=SG-SysOps2,OU=Admin,OU=OCT-Groups,DC=example,DC=com;CN=QA Tester2,OU=Security,OU=OCT-Groups,DC=example,DC=com'
-
         expect(perms.isAllowed(["CN=dev,OU=Security,OU=OCT-Groups,DC=example,DC=com"])).to.be.false;
         done()
-
+    });
+    it('ensure permissions work with elevated access', (done) => {
+        process.env.BASIC_ACCESS = 'group1;group2'
+        process.env.ELEVATED_ACCESS = 'user1;group2'
+        expect(perms.isAllowed(["group1"])).to.be.true;
+        expect(perms.isElevated(["group1"])).to.be.false;
+        expect(perms.isElevated(["group2"])).to.be.true;
+        expect(perms.isElevated(["user1"])).to.be.true;
+        done()
     });
 });
