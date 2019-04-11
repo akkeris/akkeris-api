@@ -45,7 +45,7 @@ function tokenValidate(req, res, next){
         return res.sendStatus(403);
       }
       if (user.organizations_url) {
-        oauth.getOrganization(token, process.env.OAUTH_USER_URL + '/orgs', (err, orgs) => {
+        oauth.getOrganization(token, process.env.OAUTH_USER_URL + '/orgs?per_page=1000', (err, orgs) => {
           if (err || !orgs) {
             res.sendStatus(401);
           } else {
