@@ -25,7 +25,7 @@
     "express": "^4.14.0",
     "node-uuid": "^1.4.7",
     "redis": "^2.6.2",
-    "rewire": "^2.5.2"
+    "rewire": "^4.0.1"
   },
   "devDependencies": {
     "chai": "^3.5.0",
