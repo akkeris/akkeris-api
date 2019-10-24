@@ -5,7 +5,7 @@
   "main": "main.js",
   "scripts": {
     "start": "node main.js",
-    "test": "istanbul cover _mocha -- -u exports -R spec ; cat coverage/lcov.info | ./node_modules/.bin/codacy-coverage"
+    "test": "./node_modules/.bin/nyc --reporter=text --reporter=lcov mocha --colors -u exports --reporter spec --exit && cat ./coverage/lcov.info | ./node_modules/.bin/codacy-coverage"
   },
   "repository": {
     "type": "git",
@@ -23,14 +23,14 @@
   "dependencies": {
     "body-parser": "^1.15.2",
     "express": "^4.14.0",
+    "node-jose": "^1.1.3",
     "node-uuid": "^1.4.7",
     "redis": "^2.6.2",
     "rewire": "^2.5.2"
   },
   "devDependencies": {
     "chai": "^3.5.0",
-    "codacy-coverage": "^1.1.3",
-    "istanbul": "^0.4.4",
-    "mocha": "^2.5.3"
+    "codacy-coverage": "^3.4.0",
+    "nyc": "^14.1.1"
   }
 }

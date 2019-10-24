@@ -18,7 +18,8 @@ describe("router", function() {
         'whenChanged': '20151002202538.0Z',
         'employeeID': '12345',
         'lastLogon': '20161002202538.0Z',
-        'mobile': '5555555555'
+        'mobile': '5555555555',
+        'memberOf':[],
     }
 
     before(() => {
@@ -46,21 +47,6 @@ describe("router", function() {
             expect(data).to.be.a('string');
             let res = JSON.parse(data);
             expect(res).to.be.an('array');
-            done();
-        })
-    });
-
-    it('redacts secrets when required', (done) => {
-        httph.request('get', 'http://localhost:5000/apps/api-default/config-vars', {'Authorization': process.env.AUTH_KEY}, null, (err, data) => {
-            expect(err).to.be.null;
-            expect(data).to.be.a('string');
-
-            let encryptKeyIndex = data.indexOf('"ENCRYPT_KEY":"[redacted]"');
-            expect(encryptKeyIndex).to.be.greaterThan(-1);
-
-            let hasRedactedDatabaseVar = /"DATABASE_URL":"postgres:\/\/.*:\[redacted\]@[^"]*"/.test(data);
-            expect(hasRedactedDatabaseVar).to.be.true;
-
             done();
         })
     });
