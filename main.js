@@ -9,6 +9,7 @@ let express    = require('express'),
   proxy        = require('./lib/proxy.js'),
   perms        = require('./lib/permissions.js'),
   httph        = require('./lib/http_helper.js'),
+  jose         = require('node-jose'),
   app          = express();
 
 app.disable('etag')
@@ -16,7 +17,7 @@ app.disable('x-powered-by');
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
 
-function tokenValidate(req, res, next){
+async function tokenValidate(req, res, next){
   let token = req.get('Authorization');
   if(!token) {
     return res.sendStatus(401)
@@ -33,6 +34,27 @@ function tokenValidate(req, res, next){
     return res.sendStatus(401)
   }
 
+
+  // Possible JWT token
+  if(token.includes(".") && token.length > 70 && token.toLowerCase().startsWith('bearer')) {
+    try {
+      // We only need to do a cursory validation, forward to the api controller
+      // to determine if the request should actually do something.
+      let [header, claims, signature] = token.substring(7).split('.');
+      let claim = JSON.parse(jose.util.base64url.decode(claims).toString('utf8').toString());
+      req.user = {"name":claim.sub, "login":claim.sub};
+      if(claim.hook_id) {
+        req.user = {"name":"Service account " + claim.hook_id + " (on behalf of " + claim.sub + ")", "login":"Service account " + claim.hook_id};
+      }
+      req.user.proxyAuth = true;
+      // pass through bearer account.
+      console.log(req.user.name, 'requested', req.method, (req.url || req.path));
+      return next();
+    } catch (e) {
+      console.log('JWT Error:', e)
+      // do nothing, it failed.
+    }
+  }
 
   oauth.getUser(token, (err, user) => {
     if (err || !user){
@@ -67,7 +89,7 @@ function tokenValidate(req, res, next){
   });
 }
 
-function proxyToAkkeris(req, res){
+function proxyToAkkeris(req, res) {
   proxy.akkeris(req.url, req.headers, req.method, req.body, req.user, (err, proxied_response) => {
     if (err && err instanceof Error) {
       res.status(503).send("Internal Server Error");
