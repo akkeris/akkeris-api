@@ -1,0 +1,20 @@
+{
+  "env": {
+    "commonjs": true,
+    "es6": true,
+    "node": true,
+    "mocha": true
+  },
+  "extends": "airbnb-base",
+  "plugins": [],
+  "rules": {
+    "no-plusplus": "off",
+    "no-underscore-dangle": "off",
+    "no-console": "off",
+    "max-len": [
+      "warn", 
+      { "code": 125, "ignoreUrls": true }
+    ],
+    "no-param-reassign": "off"
+  }
+}

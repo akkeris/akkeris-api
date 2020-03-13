@@ -5,7 +5,7 @@
   "main": "main.js",
   "scripts": {
     "start": "node main.js",
-    "test": "./node_modules/.bin/nyc --reporter=text --reporter=lcov mocha --colors -u exports --reporter spec --exit && cat ./coverage/lcov.info | ./node_modules/.bin/codacy-coverage"
+    "test": "./node_modules/.bin/nyc --reporter=text --reporter=lcov mocha --colors --reporter spec --exit && cat ./coverage/lcov.info | ./node_modules/.bin/codacy-coverage"
   },
   "repository": {
     "type": "git",
@@ -31,6 +31,10 @@
   "devDependencies": {
     "chai": "^3.5.0",
     "codacy-coverage": "^3.4.0",
+    "eslint": "^6.8.0",
+    "eslint-config-airbnb-base": "^14.1.0",
+    "eslint-plugin-import": "^2.20.1",
+    "mocha": "^7.1.0",
     "nyc": "^14.1.1"
   }
 }
