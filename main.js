@@ -53,7 +53,7 @@ async function tokenValidate(req, res, next) {
       req.user.proxyAuth = true;
       // pass through bearer account.
       console.log(req.user.name, 'requested', req.method, (req.url || req.path));
-      next();
+      return next();
     } catch (e) {
       console.log('JWT Error:', e);
       // do nothing, it failed.
