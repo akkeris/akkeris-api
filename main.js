@@ -185,5 +185,7 @@ process.on('uncaughtException', (err) => {
 
 oauth.init();
 
-app.listen(process.env.PORT || 5000);
+const server = app.listen(process.env.PORT || 5000);
+server.keepAliveTimeout = 1000 * (60 * 6); // 6 minutes
+
 console.log(`Listening on ${process.env.PORT || 5000}`);
