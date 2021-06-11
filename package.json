@@ -5,7 +5,8 @@
   "main": "main.js",
   "scripts": {
     "start": "node main.js",
-    "test": "./node_modules/.bin/nyc --reporter=text --reporter=lcov mocha --colors --reporter spec --exit && cat ./coverage/lcov.info | ./node_modules/.bin/codacy-coverage"
+    "test": "./node_modules/.bin/nyc --reporter=text --reporter=lcov mocha --colors --reporter spec --exit",
+    "cover": "bash -c './node_modules/.bin/nyc --reporter=text --reporter=lcov mocha --colors --reporter spec --exit && bash <(curl -Ls https://coverage.codacy.com/get.sh) report --coverage-reports ./coverage/lcov.info -t $CODACY_PROJECT_TOKEN'"
   },
   "repository": {
     "type": "git",
@@ -35,6 +36,6 @@
     "eslint-config-airbnb-base": "^14.1.0",
     "eslint-plugin-import": "^2.20.1",
     "mocha": "^7.1.0",
-    "nyc": "^14.1.1"
+    "nyc": "^15.1.0"
   }
 }
