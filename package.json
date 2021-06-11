@@ -27,7 +27,7 @@
     "node-jose": "^2.0.0",
     "node-uuid": "^1.4.7",
     "redis": "^3.1.2",
-    "rewire": "^2.5.2"
+    "rewire": "^5.0.0"
   },
   "devDependencies": {
     "chai": "^3.5.0",
