@@ -98,6 +98,9 @@ async function tokenValidate(req, res, next) {
 function proxyToAkkeris(req, res) {
   proxy.akkeris(req.url, req.headers, req.method, req.body, req.user, (err, proxiedResponse) => {
     if (err && err instanceof Error) {
+      if (process.env.DEBUG && process.env.DEBUG === 'true') {
+        console.log(err.message);
+      }
       res.status(503).send('Internal Server Error');
     } else {
       delete proxiedResponse.headers['content-length'];
